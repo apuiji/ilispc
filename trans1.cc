@@ -1,4 +1,5 @@
 #include"nodes.hh"
+#include"nodes1.hh"
 #include"nodes2.hh"
 
 using namespace std;
@@ -6,9 +7,9 @@ using namespace std;
 namespace zlt::ilispc {
   struct Scope {
     Scope *parent;
-    Function::Defs &defs;
-    map<const string *, Reference> closureDefs;
-    Scope(Scope *parent, Function::Defs &defs) noexcept: parent(parent), defs(defs) {}
+    Function1::Defs defs;
+    Function1::ClosureDefs closureDefs;
+    Scope(Scope *parent, size_t defc) noexcept: parent(parent), defs(defc) {}
   };
 
   static void trans1(Scope *scope, UniqNode &src);
@@ -25,13 +26,21 @@ namespace zlt::ilispc {
     trans1(nullptr, src.begin(), src.end());
   }
 
-  static int findRefScope(Scope *scope, const string *name) noexcept;
+  static Reference findRef(Scope *scope, bool closure, const string *name);
   static void transCall(Scope *scope, Call &call);
+
+  using ItDef = Function1::Defs::iterator;
+
+  static inline void copyDefs(Function::Defs::iterator it, Function::Defs::iterator end, ItDef outIt) noexcept {
+    for (; it != end; ++it, ++outIt) {
+      outIt->name = *it;
+    }
+  }
 
   void trans1(Scope *scope, UniqNode &src) {
     if (auto a = dynamic_cast<ID *>(src.get()); a) {
-      int s = findRefScope(scope, a->raw);
-      src.reset(new ReferenceNode(src->pos, Reference(s, a->raw)));
+      auto ref = findRef(scope, false, a->raw);
+      src.reset(new ReferenceNode(src->pos, ref));
     } else if (auto a = dynamic_cast<CallNode *>(src.get()); a) {
       transCall(scope, *a);
     } else if (auto a = dynamic_cast<Defer *>(src.get()); a) {
@@ -39,10 +48,10 @@ namespace zlt::ilispc {
     } else if (auto a = dynamic_cast<Forward *>(src.get()); a) {
       transCall(scope, *a);
     } else if (auto a = dynamic_cast<Function *>(src.get()); a) {
-      Scope scope1(scope, a->defs);
+      Scope scope1(scope, a->defs.size());
+      copyDefs(a->defs.begin(), a->defs.end(), scope1.defs.begin());
       trans1(&scope1, a->body.begin(), a->body.end());
-      src.reset(
-        new Function1(src->pos, std::move(a->defs), std::move(scope1.closureDefs), std::move(a->params), std::move(a->body)));
+      src.reset(new Function1(src->pos, std::move(scope1.defs), std::move(scope1.closureDefs), a->paramc, std::move(a->body)));
     } else if (auto a = dynamic_cast<Guard *>(src.get()); a) {
       trans1(scope, a->value);
     } else if (auto a = dynamic_cast<If *>(src.get()); a) {
@@ -69,22 +78,51 @@ namespace zlt::ilispc {
     }
   }
 
-  int findRefScope(Scope *scope, const string *name) noexcept {
+  static ItDef findDef(ItDef it, ItDef end, const string *name) noexcept;
+
+  using ItClosureDef = Function1::ClosureDefs::iterator;
+
+  static ItClosureDef findClosureDef(ItClosureDef it, ItClosureDef end, const string *name) noexcept;
+
+  Reference findRef(Scope *scope, bool closure, const string *name) {
     if (!scope) [[unlikely]] {
-      return Reference::GLOBAL_SCOPE;
+      return Reference(Reference::GLOBAL_SCOPE, 0, name);
     }
-    if (scope->defs.find(name) != scope->defs.end()) {
-      return Reference::LOCAL_SCOPE;
+    if (auto it = findDef(scope->defs.begin(), scope->defs.end(), name); it != scope->defs.end()) {
+      if (closure) {
+        it->closure = true;
+      }
+      return Reference(Reference::LOCAL_SCOPE, it - scope->defs.begin(), name);
     }
-    if (scope->closureDefs.find(name) != scope->closureDefs.end()) {
-      return Reference::CLOSURE_SCOPE;
+    auto &closureDefs = scope->closureDefs;
+    if (auto it = findClosureDef(closureDefs.begin(), closureDefs.end(), name); it != closureDefs.end()) {
+      return Reference(Reference::CLOSURE_SCOPE, it - scope->closureDefs.begin(), name);
     }
-    int s = findRefScope(scope->parent, name);
-    if (s == Reference::GLOBAL_SCOPE) {
-      return Reference::GLOBAL_SCOPE;
+    Reference ref = findRef(scope->parent, true, name);
+    if (ref.scope == Reference::GLOBAL_SCOPE) {
+      return ref;
     }
-    scope->closureDefs[name] = Reference(s, name);
-    return Reference::CLOSURE_SCOPE;
+    int i = (int) closureDefs.size();
+    closureDefs.push_back(ref);
+    return Reference(Reference::CLOSURE_SCOPE, i, name);
+  }
+
+  ItDef findDef(ItDef it, ItDef end, const string *name) noexcept {
+    for (; it != end; ++it) {
+      if (it->name == name) {
+        return it;
+      }
+    }
+    return end;
+  }
+
+  ItClosureDef findClosureDef(ItClosureDef it, ItClosureDef end, const string *name) noexcept {
+    for (; it != end; ++it) {
+      if (it->name == name) {
+        return it;
+      }
+    }
+    return end;
   }
 
   void transCall(Scope *scope, Call &call) {

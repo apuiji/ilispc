@@ -1,6 +1,6 @@
 #pragma once
 
-#include"nodes1.hh"
+#include"ilispc.hh"
 
 namespace zlt::ilispc {
   struct Reference {
@@ -10,21 +10,25 @@ namespace zlt::ilispc {
       LOCAL_SCOPE
     };
     int scope;
+    int index;
     const std::string *name;
     Reference() = default;
-    Reference(int scope, const std::string *name) noexcept: scope(scope), name(name) {}
+    Reference(int scope, int index, const std::string *name) noexcept: scope(scope), index(index), name(name) {}
   };
 
   struct Function1 final: Node {
-    using Defs = Function::Defs;
-    using Params = Function::Params;
-    using ClosureDefs = std::map<const std::string *, Reference>;
+    struct Def {
+      const std::string *name;
+      bool closure;
+    };
+    using Defs = std::vector<Def>;
+    using ClosureDefs = std::vector<Reference>;
     Defs defs;
     ClosureDefs closureDefs;
-    Params params;
+    size_t paramc;
     UniqNodes body;
-    Function1(const Pos *pos, Defs &&defs, ClosureDefs &&closureDefs, Params &&params, UniqNodes &&body) noexcept:
-    Node(pos), defs(std::move(defs)), closureDefs(std::move(closureDefs)), params(std::move(params)), body(std::move(body)) {}
+    Function1(const Pos *pos, Defs &&defs, ClosureDefs &&closureDefs, size_t paramc, UniqNodes &&body) noexcept:
+    Node(pos), defs(std::move(defs)), closureDefs(std::move(closureDefs)), paramc(paramc), body(std::move(body)) {}
   };
 
   struct ReferenceNode final: Node, Reference {

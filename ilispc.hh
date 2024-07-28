@@ -125,13 +125,15 @@ namespace zlt::ilispc {
     void expand(UniqNodes &dest, Context &ctx, const Pos *pos, const Macro &macro, UniqNodes &src);
   }
 
-  void trans(std::set<const std::string *> &defs, UniqNode &src);
+  void trans(std::vector<const std::string *> &defs, UniqNode &src);
 
-  static inline void trans(std::set<const std::string *> &defs, UniqNodes::iterator it, UniqNodes::iterator end) {
+  static inline void trans(std::vector<const std::string *> &defs, UniqNodes::iterator it, UniqNodes::iterator end) {
     for (; it != end; ++it) {
       trans(defs, *it);
     }
   }
 
   void optimize(UniqNodes &dest, bool global, UniqNodes &src);
+  void trans1(UniqNodes &src);
+  void trans2(UniqNodes &src);
 }

@@ -6,7 +6,7 @@
 using namespace std;
 
 namespace zlt::ilispc {
-  using Defs = set<const string *>;
+  using Defs = Function::Defs;
 
   static void transList(Defs &defs, UniqNode &src, ListNode &ls);
 
@@ -168,7 +168,9 @@ namespace zlt::ilispc {
     if (!id) {
       throw Bad(bad::UNEXPECTED_TOKEN, a->pos);
     }
-    defs.insert(id->raw);
+    if (find(defs.begin(), defs.end(), id->raw) == defs.end()) {
+      defs.push_back(id->raw);
+    }
     src.reset(new ID(src->pos, id->raw));
   }
 
@@ -410,43 +412,56 @@ namespace zlt::ilispc {
     transXnary<UshOper>(defs, src, ls);
   }
 
-  static void makeFnParams(Function::Params &dest, Defs &defs, UniqNode &src);
+  static void makeFnParams(Defs &defs, size_t &paramc, UniqNode &src);
 
   void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"@"_token>) {
     ls.items.pop_front();
     Defs defs1;
-    Function::Params params;
+    size_t paramc;
     if (ls.items.size()) {
-      makeFnParams(params, defs1, ls.items.front());
-      params.shrink_to_fit();
+      makeFnParams(defs1, paramc, ls.items.front());
       ls.items.pop_front();
+    } else {
+      paramc = 0;
     }
     trans(defs1, ls.items.begin(), ls.items.end());
-    src.reset(new Function(src->pos, std::move(defs1), std::move(params), std::move(ls.items)));
+    defs1.shrink_to_fit();
+    src.reset(new Function(src->pos, std::move(defs1), paramc, std::move(ls.items)));
   }
 
-  static void makeFnParams(Function::Params &dest, Defs &defs, It it, It end);
+  static void makeFnParams(Defs &defs, It it, It end);
 
-  void makeFnParams(Function::Params &dest, Defs &defs, UniqNode &src) {
+  void makeFnParams(Defs &defs, size_t &paramc, UniqNode &src) {
     if (auto id = dynamic_cast<const ID *>(src.get()); id) [[unlikely]] {
-      defs.insert(std::move(id->raw));
-      dest.push_back(id->raw);
+      defs.push_back(id->raw);
+      paramc = 0;
     } else if (auto ls = dynamic_cast<ListNode *>(src.get()); ls) {
-      makeFnParams(dest, defs, ls->items.begin(), ls->items.end());
+      makeFnParams(defs, ls->items.begin(), ls->items.end());
+      paramc = ls->items.size();
     } else {
       throw Bad(bad::UNEXPECTED_TOKEN, src->pos);
     }
   }
 
-  void makeFnParams(Function::Params &dest, Defs &defs, It it, It end) {
+  static void clearDupParams(Defs::iterator it, Defs::iterator end, const string *name) noexcept;
+
+  void makeFnParams(Defs &defs, It it, It end) {
     for (; it != end; ++it) {
       if (auto id = dynamic_cast<const ID *>(it->get()); id) {
-        defs.insert(id->raw);
-        dest.push_back(id->raw);
+        clearDupParams(defs.begin(), defs.end(), id->raw);
+        defs.push_back(id->raw);
       } else if (auto ls = dynamic_cast<const ListNode *>(it->get()); ls && ls->items.empty()) {
-        dest.push_back(nullptr);
+        defs.push_back(nullptr);
       } else {
         throw Bad(bad::UNEXPECTED_TOKEN, (**it).pos);
+      }
+    }
+  }
+
+  void clearDupParams(Defs::iterator it, Defs::iterator end, const string *name) noexcept {
+    for (; it != end; ++it) {
+      if (*it == name) {
+        *it = nullptr;
       }
     }
   }

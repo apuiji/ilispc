@@ -27,13 +27,12 @@ namespace zlt::ilispc {
   };
 
   struct Function final: Node {
-    using Defs = std::set<const std::string *>;
-    using Params = std::vector<const std::string *>;
+    using Defs = std::vector<const std::string *>;
     Defs defs;
-    Params params;
+    size_t paramc;
     UniqNodes body;
-    Function(const Pos *pos, Defs &&defs, Params &&params, UniqNodes &&body) noexcept:
-    Node(pos), defs(std::move(defs)), params(std::move(params)), body(std::move(body)) {}
+    Function(const Pos *pos, Defs &&defs, size_t paramc, UniqNodes &&body) noexcept:
+    Node(pos), defs(std::move(defs)), paramc(paramc), body(std::move(body)) {}
   };
 
   struct Guard final: Node {
