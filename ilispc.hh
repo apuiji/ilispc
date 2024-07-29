@@ -46,6 +46,7 @@ namespace zlt::ilispc {
       MACRO_ALREADY_DEFINED,
       UNEXPECTED_SYMBOL,
       UNEXPECTED_TOKEN,
+      UNKNOWN_REASON,
       UNTERMINATED_LIST,
       UNTERMINATED_STR
     };

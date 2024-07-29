@@ -13,6 +13,7 @@ namespace zlt::ilispc {
   }
 
   static void compileCall(ostream &dest, bool hasGuard, const Call &src);
+  static void compileIf(ostream &dest, bool hasGuard, const If &src);
   static void compileOper2(ostream &dest, bool hasGuard, int op, Operation<2> &src);
 
   using It = UniqNodes::const_iterator;
@@ -20,6 +21,10 @@ namespace zlt::ilispc {
   static void compileOperX(ostream &dest, bool hasGuard, int op, It it, It end);
   static void logicAnd(string &dest, bool hasGuard, It it, It end);
   static void logicOr(string &dest, bool hasGuard, It it, It end);
+  static void compileAssign(ostream &dest, bool hasGuard, const AssignOper &src);
+  static void compileRef(ostream &dest, bool hasGuard, const ReferenceNode &src);
+  static void compileMakeRef2(ostream &dest, bool hasGuard, const MakeRef2 &src);
+  static void compileFn(ostream &dest, bool hasGuard, const Function2 &src);
 
   void compile(ostream &dest, bool hasGuard, const UniqNode &src) {
     if (auto a = dynamic_cast<const StringLiteral *>(src.get()); a) {
@@ -43,22 +48,7 @@ namespace zlt::ilispc {
       compile(dest, hasGuard, a->value);
       dest.put(opcode::PUSH_GUARD);
     } else if (auto a = dynamic_cast<const If *>(src.get()); a) {
-      compile(dest, hasGuard, a->cond);
-      auto f = [] (string &dest, bool hasGuard, const UniqNode &src) {
-        stringstream ss;
-        compile(ss, hasGuard, src);
-        dest = ss.str();
-      }
-      string then;
-      f(then, hasGuard, a->then);
-      string elze;
-      f(elze, hasGuard, a->elze);
-      dest.put(opcode::JIF);
-      writeT(dest, elze.size() + 1 + sizeof(size_t));
-      dest << elze;
-      dest.put(opcode::JMP);
-      writeT(dest, then.size());
-      dest << then;
+      compileIf(dest, hasGuard, *a);
     } else if (auto a = dynamic_cast<const Null *>(src.get()); a) {
       dest.put(opcode::SET_NULL);
     } else if (auto a = dynamic_cast<const NumberLiteral *>(src.get()); a) {
@@ -150,21 +140,56 @@ namespace zlt::ilispc {
     }
     // signed operations end
     else if (auto a = dynamic_cast<const AssignOper *>(src.get()); a) {
-      ;
+      compileAssign(dest, hasGuard, *a);
+    } else if (auto a = dynamic_cast<const GetMembOper *>(src.get()); a) {
+      compileOperX(dest, hasGuard, opcode::GET_MEMB, a->items.begin(), a->items.end());
+    } else if (auto a = dynamic_cast<const LengthOper *>(src.get()); a) {
+      compile(dest, hasGuard, a->item);
+      dest.put(opcode::LENGTH);
+    } else if (auto a = dynamic_cast<const Sequence *>(src.get()); a) {
+      compile(dest, hasGuard, a->items.begin(), a->items.end());
+    } else if (auto a = dynamic_cast<const ReferenceNode *>(src.get()); a) {
+      compileRef(dest, hasGuard, *a);
+    } else if (auto a = dynamic_cast<const MakeRef2 *>(src.get()); a) {
+      compileMakeRef2(dest, hasGuard, *a);
+    } else if (auto a = dynamic_cast<const GetRef2Oper *>(src.get()); a) {
+      compile(dest, hasGuard, a->item);
+      dest.put(opcode::GET_REF2);
+    } else if (auto a = dynamic_cast<const SetRef2Oper *>(src.get()); a) {
+      compileOper2(dest, hasGuard, opcode::SET_REF2, *a);
+    } else if (auto a = dynamic_cast<const Function2 *>(src.get()); a) {
+      compileFn(dest, hasGuard, *a);
+    } else {
+      throw Bad(bad::UNKNOWN_REASON, src->pos);
     }
-    using AssignOper = Operation1<2, "="_token>;
-    using GetMembOper = Operation1<-1, "."_token>;
-    using LengthOper = Operation1<1, "length"_token>;
-    using Sequence = Operation1<-1, ","_token>;
   }
 
-  void compileCall(ostream &dest, const Call &src) {
-    compile(dest, src.callee);
+  void compileCall(ostream &dest, bool hasGuard, const Call &src) {
+    compile(dest, hasGuard, src.callee);
     dest.put(opcode::PUSH);
     for (auto &arg : args) {
-      compile(dest, arg);
+      compile(dest, hasGuard, arg);
       dest.put(opcode::PUSH);
     }
+  }
+
+  void compileIf(ostream &dest, bool hasGuard, const If &src) {
+    compile(dest, hasGuard, a->cond);
+    auto f = [] (string &dest, bool hasGuard, const UniqNode &src) {
+      stringstream ss;
+      compile(ss, hasGuard, src);
+      dest = ss.str();
+    }
+    string then;
+    f(then, hasGuard, a->then);
+    string elze;
+    f(elze, hasGuard, a->elze);
+    dest.put(opcode::JIF);
+    writeT(dest, elze.size() + 1 + sizeof(size_t));
+    dest << elze;
+    dest.put(opcode::JMP);
+    writeT(dest, then.size());
+    dest << then;
   }
 
   void compileOper2(ostream &dest, bool hasGuard, int op, Operation<2> &src) {
@@ -206,4 +231,12 @@ namespace zlt::ilispc {
     ss << s;
     dest = ss.str();
   }
+
+  void compileAssign(ostream &dest, bool hasGuard, const AssignOper &src) {
+    if ()
+  }
+
+  static void compileRef(ostream &dest, bool hasGuard, const ReferenceNode &src);
+  static void compileMakeRef2(ostream &dest, bool hasGuard, const MakeRef2 &src);
+  static void compileFn(ostream &dest, bool hasGuard, const Function2 &src);
 }
