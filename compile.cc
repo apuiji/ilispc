@@ -22,8 +22,7 @@ namespace zlt::ilispc {
   static void logicAnd(string &dest, bool hasGuard, It it, It end);
   static void logicOr(string &dest, bool hasGuard, It it, It end);
   static void compileAssign(ostream &dest, bool hasGuard, const AssignOper &src);
-  static void compileRef(ostream &dest, bool hasGuard, const ReferenceNode &src);
-  static void compileMakeRef2(ostream &dest, bool hasGuard, const MakeRef2 &src);
+  static void compileRef(ostream &dest, bool hasGuard, const Reference &src);
   static void compileFn(ostream &dest, bool hasGuard, const Function2 &src);
 
   void compile(ostream &dest, bool hasGuard, const UniqNode &src) {
@@ -148,10 +147,15 @@ namespace zlt::ilispc {
       dest.put(opcode::LENGTH);
     } else if (auto a = dynamic_cast<const Sequence *>(src.get()); a) {
       compile(dest, hasGuard, a->items.begin(), a->items.end());
+    } else if (auto a = dynamic_cast<const SetMembOper *>(src.get()); a) {
+      compile(dest, hasGuard, a->items[0]);
+      dest.put(opcode::PUSH);
+      compile(dest, hasGuard, a->items[1]);
+      dest.put(opcode::PUSH);
+      compile(dest, hasGuard, a->items[2]);
+      dest.put(opcode::SET_MEMB);
     } else if (auto a = dynamic_cast<const ReferenceNode *>(src.get()); a) {
       compileRef(dest, hasGuard, *a);
-    } else if (auto a = dynamic_cast<const MakeRef2 *>(src.get()); a) {
-      compileMakeRef2(dest, hasGuard, *a);
     } else if (auto a = dynamic_cast<const GetRef2Oper *>(src.get()); a) {
       compile(dest, hasGuard, a->item);
       dest.put(opcode::GET_REF2);
@@ -233,10 +237,65 @@ namespace zlt::ilispc {
   }
 
   void compileAssign(ostream &dest, bool hasGuard, const AssignOper &src) {
-    if ()
+    compile(dest, hasGuard, src.items[1]);
+    auto a = static_cast<const ReferenceNode *>(src.items[0].get());
+    if (a->scope == Reference::CLOSURE_SCOPE) {
+      dest.put(opcode::SET_CLOSURE);
+      writeT(dest, a->index);
+    } else if (a->scope == Reference::GLOBAL_SCOPE) {
+      dest.put(opcode::SET_GLOBAL);
+      writeT(dest, a->name);
+    } else {
+      dest.put(opcode::SET_LOCAL);
+      writeT(dest, a->index);
+    }
   }
 
-  static void compileRef(ostream &dest, bool hasGuard, const ReferenceNode &src);
-  static void compileMakeRef2(ostream &dest, bool hasGuard, const MakeRef2 &src);
-  static void compileFn(ostream &dest, bool hasGuard, const Function2 &src);
+  void compileRef(ostream &dest, bool hasGuard, const Reference &src) {
+    if (src.scope == Reference::CLOSURE_SCOPE) {
+      dest.put(opcode::GET_CLOSURE);
+      writeT(dest, src.index);
+    } else if (src.scope == Reference::GLOBAL_SCOPE) {
+      dest.put(opcode::GET_GLOBAL);
+      writeT(dest, src.name);
+    } else {
+      dest.put(opcode::GET_LOCAL);
+      writeT(dest, src.index);
+    }
+  }
+
+  static void compileFnBody(string &dest, bool hasGuard, const Function2 &src);
+
+  void compileFn(ostream &dest, bool hasGuard, const Function2 &src) {
+    string body;
+    compileFnBody(body, hasGuard, src);
+    dest.put(opcode::MAKE_FN);
+    writeT(dest, src.closureDefs.size());
+    writeT(dest, body.size());
+    dest << body;
+    if (src.closureDefs.size()) {
+      dest.put(opcode::PUSH);
+      for (int i = 0; i < src.closureDefs.size(); ++i) {
+        compileRef(dest, hasGuard, src.closureDefs[i]);
+        dest.put(opcode::SET_FN_CLOSURE);
+        writeT(dest, i);
+      }
+      dest.put(opcode::POP);
+    }
+  }
+
+  void compileFnBody(string &dest, bool hasGuard, const Function2 &src) {
+    stringstream ss;
+    ss.put(opcode::INIT_DEFC);
+    writeT(ss, src.paramc);
+    writeT(ss, src.defs.size());
+    for (int i = 0; i < src.defs.size(); ++i) {
+      if (src.defs[i].closure) {
+        ss.put(opcode::MAKE_REF2);
+        writeT(ss, i);
+      }
+    }
+    compile(ss, hasGuard, src.body.begin(), src.body.end());
+    dest = ss.str();
+  }
 }

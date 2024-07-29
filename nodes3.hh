@@ -4,10 +4,6 @@
 #include"nodes2.hh"
 
 namespace zlt::ilispc {
-  struct MakeRef2 final: Operation<1> {
-    using Operation<1>::Operation;
-  };
-
   struct GetRef2Oper final: Operation<1> {
     using Operation<1>::Operation;
   };
@@ -17,7 +13,7 @@ namespace zlt::ilispc {
   };
 
   struct Function2 final: Node {
-    using Defs = std::vector<const std::string *>;
+    using Defs = Function1::Defs;
     using ClosureDefs = Function1::ClosureDefs;
     Defs defs;
     ClosureDefs closureDefs;

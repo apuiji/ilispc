@@ -3,10 +3,12 @@
 using namespace std;
 
 namespace zlt::ilispc {
+  using Defs = Function2::Defs;
+
   struct Scope {
-    Function1::Defs &defs;
+    Defs &defs;
     bool hasGuard;
-    Scope(Function1::Defs &defs) noexcept: defs(defs) {}
+    Scope(Defs &defs) noexcept: defs(defs) {}
   };
 
   static void trans2(Scope &scope, UniqNode &src);
@@ -20,20 +22,13 @@ namespace zlt::ilispc {
   }
 
   void trans2(UniqNode &dest, UniqNodes &src) {
-    Function1::Defs defs;
+    Defs defs;
     Scope scope(defs);
     trans2(scope, src.begin(), src.end());
     dest.reset(new Function2(nullptr, {}, {}, 0, std::move(src), scope.hasGuard));
   }
 
   static void transCall(Scope &scope, Call &src);
-
-  static inline void copyDefs(
-    Function1::Defs::iterator it, Function1::Defs::iterator end, Function2::Defs::iterator outIt) noexcept {
-    for (; it != end; ++it) {
-      *outIt = it->name;
-    }
-  }
 
   static void makeRef2s(UniqNodes &dest, Function1::Defs &defs);
   static void trans2(UniqNode &dest, Scope &scope, AssignOper &src);
@@ -73,15 +68,11 @@ namespace zlt::ilispc {
     } else if (auto a = dynamic_cast<Operation<-1> *>(src.get()); a) {
       trans2(scope, a->items.begin(), a->items.end());
     } else if (auto a = dynamic_cast<Function1 *>(src.get()); a) {
-      Function2::Defs defs1(a->defs.size());
-      copyDefs(a->defs.begin(), a->defs.end(), defs1.begin());
-      UniqNodes body;
-      makeRef2s(body, a->defs);
       Scope scope1(a->defs);
       trans2(scope1, a->body.begin(), a->body.end());
-      move(a->body.begin(), a->body.end(), back_insert_iterator(body));
-      src.reset(
-        new Function2(src->pos, std::move(defs1), std::move(a->closureDefs), a->paramc, std::move(body), scope1.hasGuard));
+      bool hasGuard = scope1.hasGuard;
+      auto f = new Function2(src->pos, std::move(a->defs), std::move(a->closureDefs), a->paramc, std::move(a->body), hasGuard);
+      src.reset(f);
     } else if (auto a = dynamic_cast<ReferenceNode *>(src.get()); a) {
       trans2(src, scope, *a);
     }
@@ -92,30 +83,17 @@ namespace zlt::ilispc {
     trans2(scope, src.args.begin(), src.args.end());
   }
 
-  void makeRef2s(UniqNodes &dest, Function1::Defs &defs) {
-    for (int i = 0; i < defs.size(); ++i) {
-      if (defs[i].closure) {
-        Reference ref(Reference::LOCAL_SCOPE, i, defs[i].name);
-        UniqNode a;
-        a.reset(new ReferenceNode(nullptr, ref));
-        a.reset(new MakeRef2(nullptr, std::move(a)));
-        dest.push_back(std::move(a));
-      }
-    }
-  }
-
-  static bool isClosureRef(Function1::Defs &defs, const Reference &ref) noexcept;
+  static bool isClosureRef(Defs &defs, const Reference &ref) noexcept;
 
   void trans2(UniqNode &dest, Scope &scope, AssignOper &src) {
+    auto &ref = static_cast<const ReferenceNode &>(*src.items[0]);
     trans2(scope, src.items[1]);
-    if (auto a = dynamic_cast<const ReferenceNode *>(src.items[0].get()); a && isClosureRef(scope.defs, *a)) {
+    if (isClosureRef(scope.defs, ref)) {
       dest.reset(new SetRef2Oper(src.pos, std::move(src.items)));
-    } else {
-      trans2(scope, src.items[0]);
     }
   }
 
-  bool isClosureRef(Function1::Defs &defs, const Reference &ref) noexcept {
+  bool isClosureRef(Defs &defs, const Reference &ref) noexcept {
     if (ref.scope == Reference::GLOBAL_SCOPE) {
       return false;
     }
