@@ -3,6 +3,7 @@
 #include<list>
 #include<map>
 #include<memory>
+#include<ostream>
 #include<set>
 #include<string>
 #include<vector>
@@ -135,5 +136,12 @@ namespace zlt::ilispc {
 
   void optimize(UniqNodes &dest, bool global, UniqNodes &src);
   void trans1(UniqNodes &src);
-  void trans2(UniqNodes &src);
+  void trans2(UniqNode &dest, UniqNodes &src);
+  void compile(std::ostream &dest, bool hasGuard, const UniqNode &src);
+
+  static inline void compile(std::ostream &dest, bool hasGuard, UniqNodes::const_iterator it, UniqNodes::const_iterator end) {
+    for (; it != end; ++it) {
+      compile(dest, *it);
+    }
+  }
 }

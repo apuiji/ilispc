@@ -21,8 +21,15 @@ namespace zlt::ilispc {
     using ClosureDefs = Function1::ClosureDefs;
     Defs defs;
     ClosureDefs closureDefs;
+    size_t paramc;
     UniqNodes body;
-    Function2(const Pos *pos, Defs &&defs, ClosureDefs &&closureDefs, UniqNodes &&body) noexcept:
-    Node(pos), defs(std::move(defs)), closureDefs(std::move(closureDefs)), body(std::move(body)) {}
+    bool hasGuard;
+    Function2(const Pos *pos, Defs &&defs, ClosureDefs &&closureDefs, size_t paramc, UniqNodes &&body, bool hasGuard) noexcept:
+    Node(pos),
+    defs(std::move(defs)),
+    closureDefs(std::move(closureDefs)),
+    paramc(paramc),
+    body(std::move(body)),
+    hasGuard(hasGuard) {}
   };
 }
