@@ -142,7 +142,7 @@ namespace zlt::ilispc {
 
   static inline void compile(std::ostream &dest, bool hasGuard, UniqNodes::const_iterator it, UniqNodes::const_iterator end) {
     for (; it != end; ++it) {
-      compile(dest, *it);
+      compile(dest, hasGuard, *it);
     }
   }
 }

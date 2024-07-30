@@ -1,6 +1,8 @@
 #include<sstream>
 #include"commons/opcode.hh"
 #include"ilispc.hh"
+#include"nodes1.hh"
+#include"nodes3.hh"
 
 using namespace std;
 
@@ -14,7 +16,7 @@ namespace zlt::ilispc {
 
   static void compileCall(ostream &dest, bool hasGuard, const Call &src);
   static void compileIf(ostream &dest, bool hasGuard, const If &src);
-  static void compileOper2(ostream &dest, bool hasGuard, int op, Operation<2> &src);
+  static void compileOper2(ostream &dest, bool hasGuard, int op, const Operation<2> &src);
 
   using It = UniqNodes::const_iterator;
 
@@ -38,11 +40,16 @@ namespace zlt::ilispc {
       writeT(dest, (int) -1);
     } else if (auto a = dynamic_cast<const Defer *>(src.get()); a) {
       compile(dest, hasGuard, a->value);
-      dest.put(opcode::DEFER);
+      dest.put(opcode::PUSH_DEFER);
     } else if (auto a = dynamic_cast<const Forward *>(src.get()); a) {
-      // TODO guard
       compileCall(dest, hasGuard, *a);
-      dest.put(opcode::FORWARD);
+      if (hasGuard) {
+        dest.put(opcode::CLEAR_FN_GUARDS);
+      }
+      dest.put(opcode::INIT_FORWARD);
+      writeT(dest, a->args.size());
+      dest.put(opcode::CALL);
+      writeT(dest, a->args.size());
     } else if (auto a = dynamic_cast<const Guard *>(src.get()); a) {
       compile(dest, hasGuard, a->value);
       dest.put(opcode::PUSH_GUARD);
@@ -54,30 +61,35 @@ namespace zlt::ilispc {
       dest.put(opcode::SET_NUM);
       writeT(dest, a->value);
     } else if (auto a = dynamic_cast<const Return *>(src.get()); a) {
-      // TODO guard
       compile(dest, hasGuard, a->value);
+      if (hasGuard) {
+        dest.put(opcode::CLEAR_FN_GUARDS);
+      }
       dest.put(opcode::RETURN);
     } else if (auto a = dynamic_cast<const Throw *>(src.get()); a) {
-      // TODO guard
       compile(dest, hasGuard, a->value);
       dest.put(opcode::THROW);
     } else if (auto a = dynamic_cast<const Try *>(src.get()); a) {
-      // TODO catch
+      dest.put(opcode::PUSH_CATCH);
       compileCall(dest, hasGuard, *a);
+      dest.put(opcode::CALL);
+      writeT(dest, a->args.size());
+      dest.put(opcode::SET_NULL);
+      dest.put(opcode::THROW);
     }
     // arithmetical operations begin
     else if (auto a = dynamic_cast<const ArithAddOper *>(src.get()); a) {
-      compileOperX(dest, hasGuard, opcode::ADD, a->items.begin(), a->items.end());
+      compileOperX(dest, hasGuard, opcode::ARITH_ADD, a->items.begin(), a->items.end());
     } else if (auto a = dynamic_cast<const ArithSubOper *>(src.get()); a) {
-      compileOperX(dest, hasGuard, opcode::SUB, a->items.begin(), a->items.end());
+      compileOperX(dest, hasGuard, opcode::ARITH_SUB, a->items.begin(), a->items.end());
     } else if (auto a = dynamic_cast<const ArithMulOper *>(src.get()); a) {
-      compileOperX(dest, hasGuard, opcode::MUL, a->items.begin(), a->items.end());
+      compileOperX(dest, hasGuard, opcode::ARITH_MUL, a->items.begin(), a->items.end());
     } else if (auto a = dynamic_cast<const ArithDivOper *>(src.get()); a) {
-      compileOperX(dest, hasGuard, opcode::DIV, a->items.begin(), a->items.end());
+      compileOperX(dest, hasGuard, opcode::ARITH_DIV, a->items.begin(), a->items.end());
     } else if (auto a = dynamic_cast<const ArithModOper *>(src.get()); a) {
-      compileOperX(dest, hasGuard, opcode::MOD, a->items.begin(), a->items.end());
+      compileOperX(dest, hasGuard, opcode::ARITH_MOD, a->items.begin(), a->items.end());
     } else if (auto a = dynamic_cast<const ArithPowOper *>(src.get()); a) {
-      compileOperX(dest, hasGuard, opcode::POW, a->items.begin(), a->items.end());
+      compileOperX(dest, hasGuard, opcode::ARITH_POW, a->items.begin(), a->items.end());
     }
     // arithmetical operations end
     // logical operations begin
@@ -158,9 +170,9 @@ namespace zlt::ilispc {
       compileRef(dest, hasGuard, *a);
     } else if (auto a = dynamic_cast<const GetRef2Oper *>(src.get()); a) {
       compile(dest, hasGuard, a->item);
-      dest.put(opcode::GET_REF2);
+      dest.put(opcode::GET_REF);
     } else if (auto a = dynamic_cast<const SetRef2Oper *>(src.get()); a) {
-      compileOper2(dest, hasGuard, opcode::SET_REF2, *a);
+      compileOper2(dest, hasGuard, opcode::SET_REF, *a);
     } else if (auto a = dynamic_cast<const Function2 *>(src.get()); a) {
       compileFn(dest, hasGuard, *a);
     } else {
@@ -171,23 +183,23 @@ namespace zlt::ilispc {
   void compileCall(ostream &dest, bool hasGuard, const Call &src) {
     compile(dest, hasGuard, src.callee);
     dest.put(opcode::PUSH);
-    for (auto &arg : args) {
+    for (auto &arg : src.args) {
       compile(dest, hasGuard, arg);
       dest.put(opcode::PUSH);
     }
   }
 
   void compileIf(ostream &dest, bool hasGuard, const If &src) {
-    compile(dest, hasGuard, a->cond);
+    compile(dest, hasGuard, src.cond);
     auto f = [] (string &dest, bool hasGuard, const UniqNode &src) {
       stringstream ss;
       compile(ss, hasGuard, src);
       dest = ss.str();
-    }
+    };
     string then;
-    f(then, hasGuard, a->then);
+    f(then, hasGuard, src.then);
     string elze;
-    f(elze, hasGuard, a->elze);
+    f(elze, hasGuard, src.elze);
     dest.put(opcode::JIF);
     writeT(dest, elze.size() + 1 + sizeof(size_t));
     dest << elze;
@@ -196,7 +208,7 @@ namespace zlt::ilispc {
     dest << then;
   }
 
-  void compileOper2(ostream &dest, bool hasGuard, int op, Operation<2> &src) {
+  void compileOper2(ostream &dest, bool hasGuard, int op, const Operation<2> &src) {
     compile(dest, hasGuard, src.items[0]);
     dest.put(opcode::PUSH);
     compile(dest, hasGuard, src.items[1]);
@@ -264,11 +276,11 @@ namespace zlt::ilispc {
     }
   }
 
-  static void compileFnBody(string &dest, bool hasGuard, const Function2 &src);
+  static void compileFnBody(string &dest, const Function2 &src);
 
   void compileFn(ostream &dest, bool hasGuard, const Function2 &src) {
     string body;
-    compileFnBody(body, hasGuard, src);
+    compileFnBody(body, src);
     dest.put(opcode::MAKE_FN);
     writeT(dest, src.closureDefs.size());
     writeT(dest, body.size());
@@ -284,18 +296,18 @@ namespace zlt::ilispc {
     }
   }
 
-  void compileFnBody(string &dest, bool hasGuard, const Function2 &src) {
+  void compileFnBody(string &dest, const Function2 &src) {
     stringstream ss;
     ss.put(opcode::INIT_DEFC);
     writeT(ss, src.paramc);
     writeT(ss, src.defs.size());
     for (int i = 0; i < src.defs.size(); ++i) {
       if (src.defs[i].closure) {
-        ss.put(opcode::MAKE_REF2);
+        ss.put(opcode::MAKE_REF);
         writeT(ss, i);
       }
     }
-    compile(ss, hasGuard, src.body.begin(), src.body.end());
+    compile(ss, src.hasGuard, src.body.begin(), src.body.end());
     dest = ss.str();
   }
 }
