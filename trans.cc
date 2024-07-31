@@ -426,6 +426,10 @@ namespace zlt::ilispc {
     }
     trans(defs1, ls.items.begin(), ls.items.end());
     defs1.shrink_to_fit();
+    UniqNode a;
+    a.reset(new Null(nullptr));
+    a.reset(new Return(nullptr, std::move(a)));
+    ls.items.push_back(std::move(a));
     src.reset(new Function(src->pos, std::move(defs1), paramc, std::move(ls.items)));
   }
 
