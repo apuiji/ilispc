@@ -43,11 +43,11 @@ namespace zlt::ilispc {
       dest.put(opcode::PUSH_DEFER);
     } else if (auto a = dynamic_cast<const Forward *>(src.get()); a) {
       compileCall(dest, hasGuard, *a);
+      dest.put(opcode::BEFORE_FORWARD);
+      writeT(dest, a->args.size());
       if (hasGuard) {
         dest.put(opcode::CLEAR_FN_GUARDS);
       }
-      dest.put(opcode::INIT_FORWARD);
-      writeT(dest, a->args.size());
       dest.put(opcode::CALL);
       writeT(dest, a->args.size());
     } else if (auto a = dynamic_cast<const Guard *>(src.get()); a) {
@@ -63,11 +63,13 @@ namespace zlt::ilispc {
     } else if (auto a = dynamic_cast<const Return *>(src.get()); a) {
       compile(dest, hasGuard, a->value);
       if (hasGuard) {
+        dest.put(opcode::BEFORE_RETURN);
         dest.put(opcode::CLEAR_FN_GUARDS);
       }
       dest.put(opcode::RETURN);
     } else if (auto a = dynamic_cast<const Throw *>(src.get()); a) {
       compile(dest, hasGuard, a->value);
+      dest.put(opcode::BEFORE_THROW);
       dest.put(opcode::THROW);
     } else if (auto a = dynamic_cast<const Try *>(src.get()); a) {
       dest.put(opcode::PUSH_CATCH);
