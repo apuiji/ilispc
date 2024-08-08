@@ -32,8 +32,8 @@ namespace zlt::ilispc {
       dest.put(opcode::SET_STR);
       writeT(dest, a->value);
     } else if (auto a = dynamic_cast<const CallNode *>(src.get()); a) {
-      dest.put(opcode::PUSH_TP);
       dest.put(opcode::PUSH_BP);
+      dest.put(opcode::PUSH_TRY);
       compileCall(dest, hasGuard, *a);
       dest.put(opcode::CALL);
       writeT(dest, a->args.size());
@@ -44,8 +44,6 @@ namespace zlt::ilispc {
       compile(dest, hasGuard, a->value);
       dest.put(opcode::PUSH_DEFER);
     } else if (auto a = dynamic_cast<const Forward *>(src.get()); a) {
-      dest.put(opcode::PUSH_TP);
-      dest.put(opcode::PUSH_BP);
       compileCall(dest, hasGuard, *a);
       dest.put(opcode::BEFORE_FORWARD);
       writeT(dest, a->args.size());
@@ -76,7 +74,8 @@ namespace zlt::ilispc {
       dest.put(opcode::BEFORE_THROW);
       dest.put(opcode::THROW);
     } else if (auto a = dynamic_cast<const Try *>(src.get()); a) {
-      dest.put(opcode::PUSH_CATCH);
+      dest.put(opcode::PUSH_BP);
+      dest.put(opcode::MAKE_TRY);
       compileCall(dest, hasGuard, *a);
       dest.put(opcode::CALL);
       writeT(dest, a->args.size());

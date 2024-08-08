@@ -1,6 +1,6 @@
 include Makefile
 
-DEST = linuxdbg
+DEST = debug
 TARGET = ilispc
 
 ${DEST}/${TARGET}: $(addprefix ${DEST}/, ${OBJS})

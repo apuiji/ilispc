@@ -1,6 +1,6 @@
 include Makefile
 
-DEST = windbg
+DEST = debug
 TARGET = ilispc.exe
 
 ${DEST}/${TARGET}: $(addprefix ${DEST}/, ${OBJS})
