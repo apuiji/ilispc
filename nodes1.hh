@@ -19,11 +19,6 @@ namespace zlt::ilispc {
     using Node::Node;
   };
 
-  struct Defer final: Node {
-    UniqNode value;
-    Defer(const Pos *pos, UniqNode &&value) noexcept: Node(pos), value(std::move(value)) {}
-  };
-
   struct Forward final: Node, Call {
     Forward(const Pos *pos, Call &&call) noexcept: Node(pos), Call(std::move(call)) {}
   };
@@ -35,11 +30,6 @@ namespace zlt::ilispc {
     UniqNodes body;
     Function(const Pos *pos, Defs &&defs, size_t paramc, UniqNodes &&body) noexcept:
     Node(pos), defs(std::move(defs)), paramc(paramc), body(std::move(body)) {}
-  };
-
-  struct Guard final: Node {
-    UniqNode value;
-    Guard(const Pos *pos, UniqNode &&value) noexcept: Node(pos), value(std::move(value)) {}
   };
 
   struct If final: Node {
@@ -62,15 +52,6 @@ namespace zlt::ilispc {
   struct Return final: Node {
     UniqNode value;
     Return(const Pos *pos, UniqNode &&value) noexcept: Node(pos), value(std::move(value)) {}
-  };
-
-  struct Throw final: Node {
-    UniqNode value;
-    Throw(const Pos *pos, UniqNode &&value) noexcept: Node(pos), value(std::move(value)) {}
-  };
-
-  struct Try final: Node, Call {
-    Try(const Pos *pos, Call &&call) noexcept: Node(pos), Call(std::move(call)) {}
   };
 
   template<int N>

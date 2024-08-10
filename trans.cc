@@ -38,14 +38,10 @@ namespace zlt::ilispc {
 
   static void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"callee"_token>);
   static void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"def"_token>);
-  static void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"defer"_token>);
   static void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"forward"_token>);
-  static void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"guard"_token>);
   static void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"if"_token>);
   static void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"length"_token>);
   static void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"return"_token>);
-  static void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"throw"_token>);
-  static void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"try"_token>);
   static void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"!"_token>);
   static void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"%"_token>);
   static void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"&"_token>);
@@ -103,14 +99,10 @@ namespace zlt::ilispc {
     using S = token::Sequence<
       "callee"_token,
       "def"_token,
-      "defer"_token,
       "forward"_token,
-      "guard"_token,
       "if"_token,
       "length"_token,
       "return"_token,
-      "throw"_token,
-      "try"_token,
       "!"_token,
       "%"_token,
       "&"_token,
@@ -198,19 +190,11 @@ namespace zlt::ilispc {
     }
   }
 
-  void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"defer"_token>) {
-    transUnary<Defer>(defs, src, ls);
-  }
-
   void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"forward"_token>) {
     ls.items.pop_front();
     Call call;
     transCall(call, defs, ls.items.begin(), ls.items.end());
     src.reset(new Forward(src->pos, std::move(call)));
-  }
-
-  void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"guard"_token>) {
-    transUnary<Guard>(defs, src, ls);
   }
 
   static void transIf(UniqNode &dest, Defs &defs, const Pos *pos, It it, It end);
@@ -252,17 +236,6 @@ namespace zlt::ilispc {
 
   void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"return"_token>) {
     transUnary<Return>(defs, src, ls);
-  }
-
-  void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"throw"_token>) {
-    transUnary<Throw>(defs, src, ls);
-  }
-
-  void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"try"_token>) {
-    ls.items.pop_front();
-    Call call;
-    transCall(call, defs, ls.items.begin(), ls.items.end());
-    src.reset(new Try(src->pos, std::move(call)));
   }
 
   void trans(Defs &defs, UniqNode &src, ListNode &ls, Constant<"!"_token>) {

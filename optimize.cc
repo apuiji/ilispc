@@ -19,7 +19,7 @@ namespace zlt::ilispc {
   }
 
   bool isTerminated(const UniqNode &src) noexcept {
-    if (Dynamicastable<Forward, Return, Throw> {}(src.get())) {
+    if (Dynamicastable<Forward, Return> {}(src.get())) {
       return true;
     }
     if (auto i = dynamic_cast<const If *>(src.get()); i) {
@@ -44,16 +44,12 @@ namespace zlt::ilispc {
       }
     } else if (auto c = dynamic_cast<CallNode *>(src.get()); c) {
       optimizeCall(global, *c);
-    } else if (auto d = dynamic_cast<Defer *>(src.get()); d) {
-      optimize(global, d->value);
     } else if (auto f = dynamic_cast<Forward *>(src.get()); f) {
       optimizeCall(global, *f);
     } else if (auto f = dynamic_cast<Function *>(src.get()); f) {
       UniqNodes body;
       optimize(body, false, f->body);
       f->body = std::move(body);
-    } else if (auto g = dynamic_cast<Guard *>(src.get()); g) {
-      optimize(global, g->value);
     } else if (auto i = dynamic_cast<If *>(src.get()); i) {
       optimize(global, i->cond);
       optimize(global, i->then);
@@ -63,10 +59,6 @@ namespace zlt::ilispc {
       }
     } else if (auto r = dynamic_cast<Return *>(src.get()); r) {
       optimize(global, r->value);
-    } else if (auto t = dynamic_cast<Throw *>(src.get()); t) {
-      optimize(global, t->value);
-    } else if (auto t = dynamic_cast<Try *>(src.get()); t) {
-      optimizeCall(global, *t);
     } else if (auto s = dynamic_cast<Sequence *>(src.get()); s) {
       UniqNodes items;
       optimize(items, global, s->items);

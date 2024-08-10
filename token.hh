@@ -18,14 +18,10 @@ namespace zlt::ilispc {
       // keywords begin
       "callee",
       "def",
-      "defer",
       "forward",
-      "guard",
       "if",
       "length",
       "return",
-      "throw",
-      "try",
       // keywords end
       // preproc directions begin
       "#",

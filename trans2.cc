@@ -37,23 +37,14 @@ namespace zlt::ilispc {
   void trans2(Scope &scope, UniqNode &src) {
     if (auto a = dynamic_cast<CallNode *>(src.get()); a) {
       transCall(scope, *a);
-    } else if (auto a = dynamic_cast<Defer *>(src.get()); a) {
-      trans2(scope, a->value);
     } else if (auto a = dynamic_cast<Forward *>(src.get()); a) {
       transCall(scope, *a);
-    } else if (auto a = dynamic_cast<Guard *>(src.get()); a) {
-      scope.hasGuard = true;
-      trans2(scope, a->value);
     } else if (auto a = dynamic_cast<If *>(src.get()); a) {
       trans2(scope, a->cond);
       trans2(scope, a->then);
       trans2(scope, a->elze);
     } else if (auto a = dynamic_cast<Return *>(src.get()); a) {
       trans2(scope, a->value);
-    } else if (auto a = dynamic_cast<Throw *>(src.get()); a) {
-      trans2(scope, a->value);
-    } else if (auto a = dynamic_cast<Try *>(src.get()); a) {
-      transCall(scope, *a);
     } else if (auto a = dynamic_cast<AssignOper *>(src.get()); a) {
       trans2(src, scope, *a);
     } else if (auto a = dynamic_cast<Operation<1> *>(src.get()); a) {

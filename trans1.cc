@@ -43,8 +43,6 @@ namespace zlt::ilispc {
       src.reset(new ReferenceNode(src->pos, ref));
     } else if (auto a = dynamic_cast<CallNode *>(src.get()); a) {
       transCall(scope, *a);
-    } else if (auto a = dynamic_cast<Defer *>(src.get()); a) {
-      trans1(scope, a->value);
     } else if (auto a = dynamic_cast<Forward *>(src.get()); a) {
       transCall(scope, *a);
     } else if (auto a = dynamic_cast<Function *>(src.get()); a) {
@@ -52,18 +50,12 @@ namespace zlt::ilispc {
       copyDefs(a->defs.begin(), a->defs.end(), scope1.defs.begin());
       trans1(&scope1, a->body.begin(), a->body.end());
       src.reset(new Function1(src->pos, std::move(scope1.defs), std::move(scope1.closureDefs), a->paramc, std::move(a->body)));
-    } else if (auto a = dynamic_cast<Guard *>(src.get()); a) {
-      trans1(scope, a->value);
     } else if (auto a = dynamic_cast<If *>(src.get()); a) {
       trans1(scope, a->cond);
       trans1(scope, a->then);
       trans1(scope, a->elze);
     } else if (auto a = dynamic_cast<Return *>(src.get()); a) {
       trans1(scope, a->value);
-    } else if (auto a = dynamic_cast<Throw *>(src.get()); a) {
-      trans1(scope, a->value);
-    } else if (auto a = dynamic_cast<Try *>(src.get()); a) {
-      transCall(scope, *a);
     } else if (auto a = dynamic_cast<Operation<1> *>(src.get()); a) {
       trans1(scope, a->item);
     } else if (auto a = dynamic_cast<Operation<2> *>(src.get()); a) {
