@@ -33,7 +33,15 @@ namespace zlt::ilispc {
       writeT(dest, a->value);
     } else if (auto a = dynamic_cast<const CallNode *>(src.get()); a) {
       dest.put(opcode::PUSH_BP);
-      compileCall(dest, hasGuard, *a);
+      string s;
+      {
+        stringstream ss;
+        compileCall(ss, hasGuard, *a);
+        s = ss.str();
+      }
+      dest.put(opcode::PUSH_JMP);
+      writeT(dest, s.size() + 1);
+      dest << ss.str();
       dest.put(opcode::CALL);
       writeT(dest, a->args.size());
     } else if (auto a = dynamic_cast<const Callee *>(src.get()); a) {
