@@ -41,7 +41,7 @@ namespace zlt::ilispc {
       }
       dest.put(opcode::PUSH_JMP);
       writeT(dest, s.size() + 1);
-      dest << ss.str();
+      dest << s;
       dest.put(opcode::CALL);
       writeT(dest, a->args.size());
     } else if (auto a = dynamic_cast<const Callee *>(src.get()); a) {
