@@ -238,10 +238,7 @@ namespace zlt::ilispc {
   void compileAssign(ostream &dest, bool hasGuard, const AssignOper &src) {
     compile(dest, hasGuard, src.items[1]);
     auto a = static_cast<const ReferenceNode *>(src.items[0].get());
-    if (a->scope == Reference::CLOSURE_SCOPE) {
-      dest.put(opcode::SET_CLOSURE);
-      writeT(dest, a->index);
-    } else if (a->scope == Reference::GLOBAL_SCOPE) {
+    if (a->scope == Reference::GLOBAL_SCOPE) {
       dest.put(opcode::SET_GLOBAL);
       writeT(dest, a->name);
     } else {
@@ -276,7 +273,7 @@ namespace zlt::ilispc {
       dest.put(opcode::PUSH);
       for (int i = 0; i < src.closureDefs.size(); ++i) {
         compileRef(dest, hasGuard, src.closureDefs[i]);
-        dest.put(opcode::SET_FN_CLOSURE);
+        dest.put(opcode::SET_CLOSURE);
         writeT(dest, i);
       }
       dest.put(opcode::POP);
