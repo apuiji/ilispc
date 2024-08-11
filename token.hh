@@ -69,7 +69,7 @@ namespace zlt::ilispc {
     template<size_t N>
     struct Symbol {
       int value;
-      consteval Symbol(const char (&s)[N]): value(SYMBOL + initializerListIndexOf(symbols, s)) {}
+      consteval Symbol(const char (&s)[N]): value(SYMBOL + initialistIndexOf(symbols, s)) {}
     };
 
     template<int T>

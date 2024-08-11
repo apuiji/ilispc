@@ -50,6 +50,6 @@ namespace zlt::ilispc::token {
   }
 
   string_view raw(int t) noexcept {
-    return initializerListGet(symbols, t - SYMBOL);
+    return initialistGet(symbols, t - SYMBOL);
   }
 }

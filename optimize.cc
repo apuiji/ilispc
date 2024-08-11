@@ -19,7 +19,7 @@ namespace zlt::ilispc {
   }
 
   bool isTerminated(const UniqNode &src) noexcept {
-    if (Dynamicastable<Forward, Return> {}(src.get())) {
+    if (dynamicastable(src.get(), Types<Forward, Return>())) {
       return true;
     }
     if (auto i = dynamic_cast<const If *>(src.get()); i) {
@@ -90,7 +90,7 @@ namespace zlt::ilispc {
   }
 
   bool isConstBool(bool &dest, const UniqNode &src) noexcept {
-    if (Dynamicastable<NumberLiteral, StringLiteral, Callee, Function> {}(src.get())) {
+    if (dynamicastable(src.get(), Types<NumberLiteral, StringLiteral, Callee, Function>())) {
       dest = true;
       return true;
     }
@@ -151,7 +151,7 @@ namespace zlt::ilispc {
     if (dynamic_cast<const NumberLiteral *>(src.get())) {
       return true;
     }
-    if (Dynamicastable<StringLiteral, Callee, Function, Null> {}(src.get())) {
+    if (dynamicastable(src.get(), Types<StringLiteral, Callee, Function, Null>())) {
       dest = NAN;
       return true;
     }
@@ -222,9 +222,9 @@ namespace zlt::ilispc {
   }
 
   static bool isConstCmp(int &dest, const UniqNode &a, const UniqNode &b) noexcept {
-    Dynamicastable<NumberLiteral, StringLiteral, Callee, Function, Null> d;
-    if (d(a.get()) && d(b.get())) {
-      constCmp(dest, a, b, Types<NumberLiteral, StringLiteral, Callee, Function, Null>());
+    Types<NumberLiteral, StringLiteral, Callee, Function, Null> types;
+    if (dynamicastable(a.get(), types) && dynamicastable(b.get(), types)) {
+      constCmp(dest, a, b, types);
       return true;
     } else {
       return false;

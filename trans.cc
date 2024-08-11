@@ -15,7 +15,7 @@ namespace zlt::ilispc {
       src.reset(new NumberLiteral(src->pos, n->value));
       return;
     }
-    if (Dynamicastable<StringLiteral, ID> {}(src.get())) {
+    if (dynamicastable(src.get(), Types<StringLiteral, ID>())) {
       return;
     }
     if (auto ls = dynamic_cast<ListNode *>(src.get()); ls) {
@@ -89,7 +89,7 @@ namespace zlt::ilispc {
       return;
     }
     auto &a = ls.items.front();
-    if (Dynamicastable<NumberNode, StringLiteral, ID, ListNode> {}(a.get())) {
+    if (dynamicastable(a.get(), Types<NumberNode, StringLiteral, ID, ListNode>())) {
       Call call;
       transCall(call, defs, ls.items.begin(), ls.items.end());
       src.reset(new CallNode(src->pos, std::move(call)));
