@@ -13,7 +13,3 @@ namespace zlt::ilispc {
     return false;
   }
 }
-
-int main() {
-  return 0;
-}

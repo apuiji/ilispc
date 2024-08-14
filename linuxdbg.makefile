@@ -1,10 +1,10 @@
 include Makefile
 
 DEST = debug
-TARGET = ilispc
+TARGET = libilispc.a
 
 ${DEST}/${TARGET}: $(addprefix ${DEST}/, ${OBJS})
-	clang++ -o $@ $^ -stdlib=libc++
+	ar -cr $@ $^
 
 ${DEST}/%.o: %.cc ${HHS}
 	clang++ -c -O2 -o $@ -std=c++2b -stdlib=libc++ $<
